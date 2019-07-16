@@ -1,0 +1,28 @@
+{
+  "name": "mastertang/sessionpackage",
+  "type": "library",
+  "description": "Session package for PHP",
+  "keywords": [
+    "session",
+    "package",
+    "php"
+  ],
+  "homepage": "http://github.com/mastertang/SessionPackage",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Master Tang",
+      "email": "547740900@qq.com",
+      "homepage": "http://github.com/mastertang"
+    }
+  ],
+  "require": {
+    "php": ">=5.3.9",
+    "predis/predis": "v1.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "SessionPackage\\": "./"
+    }
+  }
+}
