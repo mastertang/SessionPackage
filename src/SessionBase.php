@@ -2,7 +2,7 @@
 
 namespace SessionPackage\src;
 
-use SessionPackage\ParserInterface;
+use SessionPackage\parser\ParserInterface;
 use SessionPackage\store\SessionInterface;
 
 /**
@@ -95,25 +95,31 @@ class SessionBase
 
         if (!empty($this->storeType)) {
             $storeClass = "SessionPackage\\store\\" . ucfirst($this->storeType);
-            if (class_exists($storeClass) && $storeClass instanceof SessionInterface) {
-                $store       = new $storeClass(
+
+            if (class_exists($storeClass)) {
+                $store = new $storeClass(
                     $this->sessionName,
                     $this->pos,
                     $this->expire,
                     $this->options
                 );
-                $this->store = $store;
-                if ($this->store->has()) {
-                    $data = $this->store->getData();
-                    $this->setData($data);
+                if ($store instanceof SessionInterface) {
+                    $this->store = $store;
+                    if ($this->store->has()) {
+                        $data = $this->store->getData();
+                        $this->setData($data);
+                    }
                 }
             }
         }
 
         if (!empty($this->parserType)) {
             $parserClass = "SessionPackage\\parser\\" . ucfirst($this->parserType);
-            if (class_exists($parserClass) && $parserClass instanceof ParserInterface) {
-                $this->parser = new $parserClass();
+            if (class_exists($parserClass)) {
+                $parser = new $parserClass();
+                if ($parser instanceof ParserInterface) {
+                    $this->parser = $parser;
+                }
             }
         }
     }
@@ -180,11 +186,15 @@ class SessionBase
     public function getData($options = null)
     {
         if ($this->has($options)) {
-            return $this->store->getData(
+            $data = $this->store->getData(
                 $this->sessionName,
                 $this->pos,
                 $options === null ? $this->options : $options
             );
+            if (!empty($this->parser)) {
+                return $this->parser->decode($data);
+            }
+            return $data;
         }
         return NULL;
     }
@@ -205,6 +215,7 @@ class SessionBase
      */
     public function write($pos = null, $expire = null, $options = null)
     {
+
         if (!empty($this->store) && is_object($this->store)) {
             if ($pos === null) {
                 $pos = $this->pos;
@@ -222,6 +233,9 @@ class SessionBase
                 }
             }
             $session = array_merge($session, $this->sessionData);
+            if (!empty($this->parser)) {
+                $session =  $this->parser->encode($session);
+            }
             return $this->store->setData(
                 $this->sessionName,
                 $session,

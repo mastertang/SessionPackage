@@ -28,7 +28,7 @@ interface SessionInterface
      * @param null $options
      * @return mixed
      */
-    public function setData($key, $data, $pos = null, $expire = null, $options = null);
+    public function setData($key = null, $data, $pos = null, $expire = null, $options = null);
 
     /**
      * 获取session数据
@@ -38,7 +38,7 @@ interface SessionInterface
      * @param null $options
      * @return mixed
      */
-    public function getData($key, $pos = null, $options = null);
+    public function getData($key = null, $pos = null, $options = null);
 
     /**
      *
@@ -57,7 +57,7 @@ interface SessionInterface
      * @param null $options
      * @return mixed
      */
-    public function has($key, $pos = null, $options = null);
+    public function has($key = null, $pos = null, $options = null);
 
     /**
      * 设置过期
@@ -68,7 +68,7 @@ interface SessionInterface
      * @param null $options
      * @return mixed
      */
-    public function setExpire($key, $pos = null, $expire = null, $options = null);
+    public function setExpire($key = null, $pos = null, $expire = null, $options = null);
 
 
     /**
@@ -80,5 +80,5 @@ interface SessionInterface
      * @param null $options
      * @return mixed
      */
-    public function deleteData($key, $pos = null, $expire = null, $options = null);
+    public function deleteData($key = null, $pos = null, $expire = null, $options = null);
 }

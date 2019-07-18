@@ -1,6 +1,6 @@
 <?php
 
-namespace SessionPackage;
+namespace SessionPackage\parser;
 
 /**
  * Interface ParserInterface

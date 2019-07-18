@@ -2,8 +2,6 @@
 
 namespace SessionPackage\parser;
 
-use SessionPackage\ParserInterface;
-
 /**
  * Class Serialize
  * @package SessionPackage\parser

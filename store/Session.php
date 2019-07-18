@@ -37,9 +37,12 @@ class Session implements SessionInterface
      * @param null $options
      * @return bool|mixed
      */
-    public function has($key, $pos = null, $options = null)
+    public function has($key = null, $pos = null, $options = null)
     {
         // TODO: Implement has() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         if (!$this->sessionStatus() || !isset($_SESSION[$key])) {
             return false;
         }
@@ -63,9 +66,12 @@ class Session implements SessionInterface
      * @param null $options
      * @return mixed|null
      */
-    public function getData($key, $pos = null, $options = null)
+    public function getData($key = null, $pos = null, $options = null)
     {
         // TODO: Implement getData() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         if (!$this->has($key)) {
             return null;
         }
@@ -83,9 +89,12 @@ class Session implements SessionInterface
      * @param null $options
      * @return bool|mixed
      */
-    public function setData($key, $data, $pos = null, $expire = null, $options = null)
+    public function setData($key = null, $data, $pos = null, $expire = null, $options = null)
     {
         // TODO: Implement setData() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         if (!$this->sessionStatus()) {
             return false;
         }
@@ -93,10 +102,11 @@ class Session implements SessionInterface
         if (is_numeric($expire) && $expire >= 0) {
             $nowExpire = $expire;
         }
-        $oldData = isset($_SESSION[$key]) ? $_SESSION[$key] : null;
+
+        /*$oldData = isset($_SESSION[$key]) ? $_SESSION[$key] : null;
         if (!empty($oldData) && isset($oldData['expire']) && $nowExpire === false) {
             $nowExpire = $oldData['expire'];
-        }
+        }*/
         if ($nowExpire === false) {
             $nowExpire = 0;
         }
@@ -117,9 +127,12 @@ class Session implements SessionInterface
      * @param null $options
      * @return bool|mixed
      */
-    public function setExpire($key, $pos = null, $expire = null, $options = null)
+    public function setExpire($key = null, $pos = null, $expire = null, $options = null)
     {
         // TODO: Implement setExpire() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         if (!$this->sessionStatus()) {
             return false;
         }
@@ -155,9 +168,12 @@ class Session implements SessionInterface
      * @param null $options
      * @return bool|mixed
      */
-    public function deleteData($key, $pos = null, $expire = null, $options = null)
+    public function deleteData($key = null, $pos = null, $expire = null, $options = null)
     {
         // TODO: Implement deleteData() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         if (isset($_SESSION[$key])) {
             unset($_SESSION[$key]);
         }

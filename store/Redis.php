@@ -31,9 +31,14 @@ class Redis implements SessionInterface
     public $option = null;
 
     /**
-     * @var array 连接option
+     * @var array 连接参数
      */
-    public $connectionOption = [];
+    public $connection = [];
+
+    /**
+     * @var array
+     */
+    public $connectionOptions = [];
 
     /**
      * Session constructor.
@@ -57,9 +62,26 @@ class Redis implements SessionInterface
         }
 
         if (!empty($option)) {
-            $this->connectionOption = $this->handleOption($option);
-            $this->option           = $option;
+            $this->connection        = $this->handleConnection($option);
+            $this->connectionOptions = $this->handleOptions($option);
+            $this->option            = $option;
         }
+    }
+
+    /**
+     * 处理option参数
+     *
+     * @param $option
+     * @return null
+     */
+    public function handleOptions($option)
+    {
+        if (!empty($option)) {
+            if (isset($option['options']) && is_array($option['options'])) {
+                return $option['options'];
+            }
+        }
+        return null;
     }
 
     /**
@@ -68,21 +90,21 @@ class Redis implements SessionInterface
      * @param $option
      * @return array|null|string
      */
-    public function handleOption($option)
+    public function handleConnection($option)
     {
         if (!empty($option)) {
-            if (is_string($option)) {
-                return $option;
-            }
-            if (is_array($option)) {
-                if (isset($option['scheme'], $option['host'], $option['port'])
-                    && !empty($option['scheme'])
-                    && !empty($option['host'])
-                    && !empty($option['port'])) {
+            if (isset($option['con']) && is_array($option['con'])) {
+                if (is_string($option['con'])) {
+                    return $option['con'];
+                }
+                if (isset($option['con']['scheme'], $option['con']['host'], $option['con']['port'])
+                    && !empty($option['con']['scheme'])
+                    && !empty($option['con']['host'])
+                    && !empty($option['con']['port'])) {
                     return [
-                        'scheme' => $option['scheme'],
-                        'host'   => $option['host'],
-                        'port'   => $option['port']
+                        'scheme' => $option['con']['scheme'],
+                        'host'   => $option['con']['host'],
+                        'port'   => $option['con']['port']
                     ];
                 }
             }
@@ -98,17 +120,22 @@ class Redis implements SessionInterface
      */
     public function createClient($option = null)
     {
-        $connection = null;
+        $connection       = null;
+        $connectionOption = [];
         if ($option !== null) {
-            $connection = $this->handleOption($option);
+            $connection       = $this->handleConnection($option);
+            $connectionOption = $this->handleOptions($option);
         }
         if (empty($connection)) {
-            $connection = $this->connectionOption;
+            $connection = $this->connection;
+        }
+        if (empty($connectionOption)) {
+            $connectionOption = $this->connectionOptions;
         }
         if (empty($connection)) {
             return false;
         }
-        $client = new Client($connection);
+        $client = new Client($connection, $connectionOption);
         return $client;
     }
 
@@ -120,9 +147,12 @@ class Redis implements SessionInterface
      * @param null $options
      * @return bool|mixed
      */
-    public function has($key, $pos = null, $options = null)
+    public function has($key = null, $pos = null, $options = null)
     {
         // TODO: Implement has() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
             $db = $pos;
@@ -130,6 +160,7 @@ class Redis implements SessionInterface
         if (!($client = $this->createClient($options))) {
             return false;
         }
+
         if (!$client->select($db)) {
             return false;
         };
@@ -144,9 +175,12 @@ class Redis implements SessionInterface
      * @param null $options
      * @return mixed|null
      */
-    public function getData($key, $pos = null, $options = null)
+    public function getData($key = null, $pos = null, $options = null)
     {
         // TODO: Implement getData() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
             $db = $pos;
@@ -154,6 +188,8 @@ class Redis implements SessionInterface
         if (!($client = $this->createClient($options))) {
             return false;
         }
+
+
         if (!$client->select($db)) {
             return false;
         };
@@ -170,9 +206,12 @@ class Redis implements SessionInterface
      * @param null $options
      * @return bool|mixed
      */
-    public function setData($key, $data, $pos = null, $expire = null, $options = null)
+    public function setData($key = null, $data, $pos = null, $expire = null, $options = null)
     {
         // TODO: Implement setData() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
             $db = $pos;
@@ -194,7 +233,7 @@ class Redis implements SessionInterface
             $nowExpire = abs($this->expire);
         }
         if ($nowExpire === 0) {
-            $nowExpire = -1;
+            $nowExpire = 20;
         }
         return $client->setex($key, $nowExpire, $data) ? true : false;
     }
@@ -208,9 +247,12 @@ class Redis implements SessionInterface
      * @param null $options
      * @return bool|mixed
      */
-    public function setExpire($key, $pos = null, $expire = null, $options = null)
+    public function setExpire($key = null, $pos = null, $expire = null, $options = null)
     {
         // TODO: Implement setExpire() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
             $db = $pos;
@@ -233,9 +275,12 @@ class Redis implements SessionInterface
      * @param null $options
      * @return bool|int|mixed
      */
-    public function deleteData($key, $pos = null, $expire = null, $options = null)
+    public function deleteData($key = null, $pos = null, $expire = null, $options = null)
     {
         // TODO: Implement deleteData() method.
+        if ($key === null || $key == '') {
+            $key = $this->sesssionName;
+        }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
             $db = $pos;
