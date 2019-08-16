@@ -29,6 +29,16 @@ class SessionBase
     protected $sessionName = '';
 
     /**
+     * @var string 锁名
+     */
+    protected $lockKeyName = '';
+
+    /**
+     * @var int 锁过期时间
+     */
+    protected $lockExpire = 2;
+
+    /**
      * @var null session位置
      */
     protected $pos = null;
@@ -86,32 +96,21 @@ class SessionBase
      * @param null $expire 过期时间(单位：秒) ，+100，-100
      * @param null $options
      */
-    public function __construct($sessionName = null, $pos = null, $expire = null, $options = null)
+    public function __construct(
+        $key = null,
+        $lockKey = null,
+        $pos = null,
+        $expire = null,
+        $lockExpire = null,
+        $options = null
+    )
     {
-        $sessionName === null or $this->sessionName = $sessionName;
+        $key === null or $this->sessionName = $key;
+        $lockKey === null or $this->lockKeyName = $lockKey;
         $pos === null or $this->pos = $pos;
         $options === null or $this->options = $options;
         ($expire === null || !is_numeric($expire)) or $this->expire = $expire;
-
-        if (!empty($this->storeType)) {
-            $storeClass = "SessionPackage\\store\\" . ucfirst($this->storeType);
-
-            if (class_exists($storeClass)) {
-                $store = new $storeClass(
-                    $this->sessionName,
-                    $this->pos,
-                    $this->expire,
-                    $this->options
-                );
-                if ($store instanceof SessionInterface) {
-                    $this->store = $store;
-                    if ($this->store->has()) {
-                        $data = $this->store->getData();
-                        $this->setData($data);
-                    }
-                }
-            }
-        }
+        ($lockExpire === null || !is_numeric($lockExpire)) or $this->lockExpire = $lockExpire;
 
         if (!empty($this->parserType)) {
             $parserClass = "SessionPackage\\parser\\" . ucfirst($this->parserType);
@@ -119,6 +118,32 @@ class SessionBase
                 $parser = new $parserClass();
                 if ($parser instanceof ParserInterface) {
                     $this->parser = $parser;
+                }
+            }
+        }
+
+        if (!empty($this->storeType)) {
+            $storeClass = "SessionPackage\\store\\" . ucfirst($this->storeType);
+
+            if (class_exists($storeClass)) {
+                $store = new $storeClass(
+                    $this->sessionName,
+                    $this->lockKeyName,
+                    $this->pos,
+                    $this->expire,
+                    $this->lockExpire,
+                    $this->options
+                );
+                if ($store instanceof SessionInterface) {
+                    $this->store = $store;
+                    if ($this->store->has()) {
+                        $data = $this->store->getData();
+                        if (!empty($this->parser)) {
+                            $this->setData($this->parser->decode($data));
+                        } else {
+                            $this->setData($data);
+                        }
+                    }
                 }
             }
         }
@@ -157,6 +182,9 @@ class SessionBase
     public function has($options = null)
     {
         if (!empty($this->store) && is_object($this->store)) {
+            if (!is_string($this->sessionName) || $this->sessionName === '') {
+                throw new \Exception("Session name can not be empty!");
+            }
             return $this->store->has(
                 $this->sessionName,
                 $this->pos,
@@ -215,7 +243,6 @@ class SessionBase
      */
     public function write($pos = null, $expire = null, $options = null)
     {
-
         if (!empty($this->store) && is_object($this->store)) {
             if ($pos === null) {
                 $pos = $this->pos;
@@ -232,13 +259,75 @@ class SessionBase
                     $session[$key] = $this->$key;
                 }
             }
-            $session = array_merge($session, $this->sessionData);
+            $session = array_merge($this->sessionData, $session);
             if (!empty($this->parser)) {
-                $session =  $this->parser->encode($session);
+                $session = $this->parser->encode($session);
+            }
+            if (!is_string($this->sessionName) || $this->sessionName === '') {
+                throw new \Exception("Session name can not be empty!");
             }
             return $this->store->setData(
                 $this->sessionName,
                 $session,
+                $pos,
+                $expire,
+                $options === null ? $this->options : $options
+            );
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * 加锁
+     *
+     * @param null $pos
+     * @param null $expire
+     * @param null $options
+     * @return bool|mixed
+     */
+    public function lock($pos = null, $expire = false, $options = null)
+    {
+        if (!empty($this->store) && is_object($this->store)) {
+            if ($pos === null) {
+                $pos = $this->pos;
+            }
+            if ($expire != null && (!is_numeric($expire) || $expire < 0)) {
+                $expire = null;
+            }
+            if (!is_string($this->sessionName) || $this->sessionName === '') {
+                throw new \Exception("Session name can not be empty!");
+            }
+            return $this->store->lock(
+                $this->lockKeyName,
+                $pos,
+                $expire,
+                $options === null ? $this->options : $options
+            );
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @param null $pos
+     * @param null $expire
+     * @param null $options
+     */
+    public function unlock($pos = null, $expire = null, $options = null)
+    {
+        if (!empty($this->store) && is_object($this->store)) {
+            if ($pos === null) {
+                $pos = $this->pos;
+            }
+            if ($expire != null && (!is_numeric($expire) || $expire < 0)) {
+                $expire = null;
+            }
+            if (!is_string($this->sessionName) || $this->sessionName === '') {
+                throw new \Exception("Session name can not be empty!");
+            }
+            return $this->store->unlock(
+                $this->lockKeyName,
                 $pos,
                 $expire,
                 $options === null ? $this->options : $options

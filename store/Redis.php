@@ -13,7 +13,17 @@ class Redis implements SessionInterface
     /**
      * @var string session名字
      */
-    public $sesssionName = '';
+    public $sessionName = '';
+
+    /**
+     * @var array session锁key
+     */
+    public $sessionLockKey = '';
+
+    /**
+     * @var int 锁过去时间(单位:秒)
+     */
+    public $lockExpireTime = 2;
 
     /**
      * @var int 数据库索引 0-15
@@ -36,7 +46,7 @@ class Redis implements SessionInterface
     public $connection = [];
 
     /**
-     * @var array
+     * @var array 连接选项
      */
     public $connectionOptions = [];
 
@@ -48,10 +58,22 @@ class Redis implements SessionInterface
      * @param null $expire
      * @param null $option
      */
-    public function __construct($key = null, $pos = null, $expire = null, $option = null)
+    public function __construct(
+        $key = null,
+        $lockKey = null,
+        $pos = null,
+        $expire = null,
+        $lockExpire = null,
+        $option = null
+    )
     {
         if ($key !== null) {
-            $this->sesssionName = $key;
+            $this->sessionName = $key;
+            if ($lockKey === null || empty($lockKey) || !is_string($lockKey)) {
+                $this->sessionLockKey = "{$key}_lock_key";
+            } else {
+                $this->sessionLockKey = $lockKey;
+            }
         }
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
             $this->database = $pos;
@@ -59,6 +81,10 @@ class Redis implements SessionInterface
 
         if ($expire !== null && is_numeric($expire)) {
             $this->expire = $expire;
+        }
+
+        if ($lockExpire !== null && is_numeric($lockExpire) && $lockExpire >= 0) {
+            $this->lockExpire = $lockExpire;
         }
 
         if (!empty($option)) {
@@ -151,7 +177,7 @@ class Redis implements SessionInterface
     {
         // TODO: Implement has() method.
         if ($key === null || $key == '') {
-            $key = $this->sesssionName;
+            $key = $this->sessionName;
         }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
@@ -179,7 +205,7 @@ class Redis implements SessionInterface
     {
         // TODO: Implement getData() method.
         if ($key === null || $key == '') {
-            $key = $this->sesssionName;
+            $key = $this->sessionName;
         }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
@@ -210,7 +236,7 @@ class Redis implements SessionInterface
     {
         // TODO: Implement setData() method.
         if ($key === null || $key == '') {
-            $key = $this->sesssionName;
+            $key = $this->sessionName;
         }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
@@ -219,6 +245,7 @@ class Redis implements SessionInterface
         if (!($client = $this->createClient($options))) {
             return false;
         }
+
         if (!$client->select($db)) {
             return false;
         };
@@ -232,9 +259,9 @@ class Redis implements SessionInterface
         if ($nowExpire === null) {
             $nowExpire = abs($this->expire);
         }
-        if ($nowExpire === 0) {
+        /*if ($nowExpire === 0) {
             $nowExpire = 20;
-        }
+        }*/
         return $client->setex($key, $nowExpire, $data) ? true : false;
     }
 
@@ -251,7 +278,7 @@ class Redis implements SessionInterface
     {
         // TODO: Implement setExpire() method.
         if ($key === null || $key == '') {
-            $key = $this->sesssionName;
+            $key = $this->sessionName;
         }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
@@ -279,7 +306,7 @@ class Redis implements SessionInterface
     {
         // TODO: Implement deleteData() method.
         if ($key === null || $key == '') {
-            $key = $this->sesssionName;
+            $key = $this->sessionName;
         }
         $db = $this->database;
         if ($pos !== null && $pos >= 0 && $pos <= 15) {
@@ -292,5 +319,68 @@ class Redis implements SessionInterface
             return false;
         };
         return $client->expire($key, 0);
+    }
+
+    /**
+     * 加锁
+     *
+     * @param null $key
+     * @param null $pos
+     * @param null $expire
+     * @param null $options
+     * @return mixed|void
+     */
+    public function lock($key = null, $pos = null, $expire = false, $options = null)
+    {
+        // TODO: Implement lock() method.
+        if ($key === null || $key == '') {
+            $key = $this->sessionLockKey;
+        }
+        $db = $this->database;
+        if ($pos !== null && $pos >= 0 && $pos <= 15) {
+            $db = $pos;
+        }
+        if (!($client = $this->createClient($options))) {
+            return false;
+        }
+        if (!$client->select($db)) {
+            return false;
+        };
+        $isLock = $client->setnx($key, 1);
+        if (!$isLock && $expire) {
+            if ($client->ttl($key) == -1) {
+                $client->expire($key, $this->lockExpireTime);
+            }
+        }
+        return $isLock ? true : false;
+    }
+
+    /**
+     * 解锁
+     *
+     * @param null $key
+     * @param null $pos
+     * @param null $expire
+     * @param null $options
+     * @return mixed|void
+     */
+    public function unlock($key = null, $pos = null, $expire = null, $options = null)
+    {
+        // TODO: Implement unlock() method.
+        if ($key === null || $key == '') {
+            $key = $this->sessionLockKey;
+        }
+        $db = $this->database;
+        if ($pos !== null && $pos >= 0 && $pos <= 15) {
+            $db = $pos;
+        }
+        if (!($client = $this->createClient($options))) {
+            return false;
+        }
+        if (!$client->select($db)) {
+            return false;
+        };
+        $result = $client->del([$key]);
+        return $result ? true : false;
     }
 }

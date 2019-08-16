@@ -21,7 +21,7 @@ class Session implements SessionInterface
      * @param null $expire
      * @param null $option
      */
-    public function __construct($key = null, $pos = null, $expire = null, $option = null)
+    public function __construct($key = null, $lockKey = null, $pos = null, $expire = null, $lockExpire = null, $option = null)
     {
         if ($key !== null) {
             $this->sesssionName = $key;
@@ -202,5 +202,36 @@ class Session implements SessionInterface
                 return false;
                 break;
         }
+    }
+
+    /**
+     * 加锁
+     *
+     * @param null $key
+     * @param null $pos
+     * @param null $expire
+     * @param null $options
+     * @return mixed|void
+     */
+    public function lock($key = null, $pos = null, $expire = null, $options = null)
+    {
+        // TODO: Implement lock() method.
+
+        return true;
+    }
+
+    /**
+     * 解锁
+     *
+     * @param null $key
+     * @param null $pos
+     * @param null $expire
+     * @param null $options
+     * @return mixed|void
+     */
+    public function unlock($key = null, $pos = null, $expire = null, $options = null)
+    {
+        // TODO: Implement unlock() method.
+        return true;
     }
 }
